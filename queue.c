@@ -43,6 +43,7 @@ struct node * pop(struct queue *q)
     else
     {
         struct node *n = q->tail;
+
         q->tail = q->tail->prev;
 
         if(q->tail != NULL)
