@@ -202,6 +202,8 @@ int main(int argc, char *argv[])
                         }
                         else if(errno == EWOULDBLOCK)
                             printf("EWOULDBLOCK");
+                        else
+                            break;
                     }
                     else
                     {
