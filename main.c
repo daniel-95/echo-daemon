@@ -1,4 +1,5 @@
 #include "main.h"
+#define BUFSIZE 32
 
 int main(int argc, char *argv[])
 {
@@ -59,7 +60,7 @@ int main(int argc, char *argv[])
     }
 
     char *buf = NULL;
-    int N = 32;
+    int N = BUFSIZE;
     struct sockaddr_storage client_addr;
     socklen_t addr_size = 0;
     int client;
@@ -83,13 +84,13 @@ int main(int argc, char *argv[])
         buf = malloc(N*sizeof(char));
         strcpy(buf, (char*)"");
 
-        char chunk[32];
+        char chunk[BUFSIZE];
         flags = fcntl(client, F_GETFL, 0);
         fcntl(client, F_SETFL, flags | O_NONBLOCK);
 
         while(1)
         {
-            read_bytes = recv(client, chunk, 32, 0);
+            read_bytes = recv(client, chunk, BUFSIZE-1, 0);
             if(read_bytes == -1)
             {
                 if(errno == EAGAIN)
@@ -97,6 +98,9 @@ int main(int argc, char *argv[])
                     if(strlen(buf) > 0)
                     {
                         printf("Sending back...\n");
+
+                        send(client, buf, strlen(buf), MSG_DONTWAIT);
+
                         close(client); //shutdown?
                         break;
                     }
@@ -106,6 +110,7 @@ int main(int argc, char *argv[])
             }
             else
             {
+                chunk[read_bytes] = '\0';
                 if(strlen(buf) + strlen(chunk) >= N)
                 {
                     N *= 2;
@@ -115,7 +120,7 @@ int main(int argc, char *argv[])
                 strcat(buf, chunk);
             }
 
-            memset(chunk, 0, 32);
+            memset(chunk, 0, BUFSIZE);
         }
     }
 
