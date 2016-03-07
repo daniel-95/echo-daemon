@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <poll.h>
 
 #include "queue.h"
 

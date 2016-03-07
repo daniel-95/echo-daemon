@@ -32,7 +32,7 @@ void *logging_thread(void *log_queue)
         if(n != NULL)
         {
             write_log(n->data);
-            free(n->data);
+//            free(n->data);
             free(n);
         }
 
@@ -45,7 +45,9 @@ void *logging_thread(void *log_queue)
 
 int main(int argc, char *argv[])
 {
-    int status;
+    int status, cur_size;
+    int i, j;
+    int flags;
     int sock;
     pthread_t log_thread;
     struct queue *q;
@@ -53,6 +55,10 @@ int main(int argc, char *argv[])
     struct addrinfo hints;
     struct addrinfo *servinfo, *p;
     char port[6];
+
+    struct pollfd fds[200];
+    int nfds = 1;
+
     sprintf(port, "%d", int_port);
 
     q = new_queue();
@@ -89,6 +95,9 @@ int main(int argc, char *argv[])
             perror("bind");
             continue;
         }
+
+        flags = fcntl(sock, F_GETFL, 0);
+        fcntl(sock, F_SETFL, flags | O_NONBLOCK);
     }
 
     if(p == NULL)
@@ -105,73 +114,115 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    memset(fds, 0, sizeof(fds));
+
+    fds[0].fd = sock;
+    fds[0].events = POLLIN;
+
     char *buf = NULL;
     int N = BUFSIZE;
     struct sockaddr_storage client_addr;
     socklen_t addr_size = 0;
     int client;
-    int flags;
     int read_bytes = 0;
 
     while(true)
     {
-        client = accept(sock, (struct sockaddr*)&client_addr, &addr_size);
-        printf("new connection\n");
-
-        if(client == -1)
+        status = poll(fds, nfds, -1);
+        if(status < 0)
         {
-            printf("Accepting error: %d\n", errno);
+            perror("poll error\n");
             break;
         }
 
-        if(buf != NULL)
-            free(buf);
-
-        buf = malloc(N*sizeof(char));
-        strcpy(buf, (char*)"");
-
-        char chunk[BUFSIZE];
-        flags = fcntl(client, F_GETFL, 0);
-        fcntl(client, F_SETFL, flags | O_NONBLOCK);
-
-        while(1)
+        cur_size = nfds;
+        for(i = 0; i < cur_size; i++)
         {
-            read_bytes = recv(client, chunk, BUFSIZE-1, 0);
-            if(read_bytes == -1)
+
+            if(fds[i].revents == 0)
+                continue;
+
+            if(fds[i].fd == sock)
             {
-                if(errno == EAGAIN)
+                do
                 {
-                    if(strlen(buf) > 0)
+                    client = accept(sock, (struct sockaddr*)&client_addr, &addr_size);
+                    printf("new connection\n");
+
+                    if(client == -1 && errno != EAGAIN)
                     {
-                        struct node *n = new_node(buf);
-                        lock_queue(q);
-                        push(q, n);
-                        unlock_queue(q);
-
-                        printf("Sending back...\n");
-
-                        send(client, buf, strlen(buf), MSG_DONTWAIT);
-
-                        close(client); //shutdown?
+                        printf("Accepting error: %d\n", errno);
                         break;
                     }
+
+                    fds[nfds].fd = client;
+                    fds[nfds].events = POLLIN;
+                    nfds++;
                 }
-                else if(errno == EWOULDBLOCK)
-                    printf("EWOULDBLOCK");
+                while(client != -1);
             }
             else
             {
-                chunk[read_bytes] = '\0';
-                if(strlen(buf) + strlen(chunk) >= N)
+
+                if(buf != NULL)
+                    free(buf);
+
+                buf = malloc(N*sizeof(char));
+                strcpy(buf, (char*)"");
+
+                char chunk[BUFSIZE];
+                flags = fcntl(fds[i].fd, F_GETFL, 0);
+                fcntl(fds[i].fd, F_SETFL, flags | O_NONBLOCK);
+
+                while(1)
                 {
-                    N *= 2;
-                    buf = realloc(buf, N);
-                }
+                    read_bytes = recv(fds[i].fd, chunk, BUFSIZE-1, 0);
+                    if(read_bytes == -1)
+                    {
+                        if(errno == EAGAIN)
+                        {
+                            if(strlen(buf) > 0)
+                            {
+                                struct node *n = new_node(buf);
+                                lock_queue(q);
+                                push(q, n);
+                                unlock_queue(q);
 
-                strcat(buf, chunk);
+                                printf("Sending back...\n");
+
+                                send(fds[i].fd, buf, strlen(buf), MSG_DONTWAIT);
+
+                                fds[i].fd = -1; //shutdown?
+                                break;
+                            }
+                        }
+                        else if(errno == EWOULDBLOCK)
+                            printf("EWOULDBLOCK");
+                    }
+                    else
+                    {
+                        chunk[read_bytes] = '\0';
+                        if(strlen(buf) + strlen(chunk) >= N)
+                        {
+                            N *= 2;
+                            buf = realloc(buf, N);
+                        }
+
+                        strcat(buf, chunk);
+                    }
+
+                    memset(chunk, 0, BUFSIZE);
+               }
             }
+        }
 
-            memset(chunk, 0, BUFSIZE);
+        for(i = 0; i < nfds; i++)
+        {
+            if(fds[i].fd == -1)
+            {
+                for(j = i; j < nfds-1; j++)
+                    fds[i].fd = fds[i+1].fd;
+            }
         }
     }
 
