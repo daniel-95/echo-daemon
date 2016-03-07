@@ -5,12 +5,16 @@ int main(int argc, char *argv[])
 {
     int status;
     int sock;
+    pthread_t log_thread;
+    struct queue *q;
     int int_port = 1234;
     struct addrinfo hints;
     struct addrinfo *servinfo, *p;
     char port[6];
     sprintf(port, "%d", int_port);
 
+    q = new_queue();
+    pthread_create(&log_thread, NULL, logging_thread, (void*)q);
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -97,6 +101,11 @@ int main(int argc, char *argv[])
                 {
                     if(strlen(buf) > 0)
                     {
+                        struct node *n = new_node(buf);
+                        lock_queue(q);
+                        push(q, n);
+                        unlock_queue(q);
+
                         printf("Sending back...\n");
 
                         send(client, buf, strlen(buf), MSG_DONTWAIT);

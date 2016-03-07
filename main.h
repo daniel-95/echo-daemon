@@ -9,11 +9,9 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <fcntl.h>
+#include <pthread.h>
 
-void hello_world()
-{
-    printf("soon there will be a daemon\n");
-}
+#include "queue.c"
 
 void write_log(char * info)
 {
@@ -33,3 +31,25 @@ void write_log(char * info)
     fclose(fp);
 }
 
+void *logging_thread(void *log_queue)
+{
+    struct node *n;
+    struct queue *q = (struct queue*)log_queue;
+
+    for(;;)
+    {
+        lock_queue(q);
+        n = pop(q);
+
+        if(n != NULL)
+        {
+            write_log(n->data);
+            free(n->data);
+            free(n);
+        }
+
+        unlock_queue(q);
+    }
+
+    return (void*)0;
+}
