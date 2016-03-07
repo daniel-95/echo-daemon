@@ -147,17 +147,20 @@ int main(int argc, char *argv[])
                 do
                 {
                     client = accept(sock, (struct sockaddr*)&client_addr, &addr_size);
-                    printf("new connection\n");
 
-                    if(client == -1 && errno != EAGAIN)
+                    if(client != -1)
+                    {
+                        printf("new connection\n");
+
+                        fds[nfds].fd = client;
+                        fds[nfds].events = POLLIN | POLLOUT;
+                        nfds++;
+                    }
+                    else if(errno != EAGAIN)
                     {
                         printf("Accepting error: %d\n", errno);
                         break;
                     }
-
-                    fds[nfds].fd = client;
-                    fds[nfds].events = POLLIN;
-                    nfds++;
                 }
                 while(client != -1);
             }
@@ -192,6 +195,7 @@ int main(int argc, char *argv[])
 
                                 send(fds[i].fd, buf, strlen(buf), MSG_DONTWAIT);
 
+                                close(fds[i].fd);
                                 fds[i].fd = -1; //shutdown?
                                 break;
                             }
