@@ -32,7 +32,7 @@ void *logging_thread(void *log_queue)
         if(n != NULL)
         {
             write_log(n->data);
-//            free(n->data);
+            free(n->data);
             free(n);
         }
 

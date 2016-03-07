@@ -15,7 +15,7 @@ struct node * new_node(char *string)
 {
     struct node *n = malloc(sizeof(struct node));
     n->next = n->prev = NULL;
-    n->data = malloc(strlen(string) * sizeof(char));
+    n->data = malloc((strlen(string)+1) * sizeof(char));
     strcpy(n->data, string);
 
     return n;
