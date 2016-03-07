@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     struct addrinfo *servinfo, *p;
     char port[6];
 
-    struct pollfd fds[200];
+    struct pollfd fds[256];
     int nfds = 1;
 
     sprintf(port, "%d", int_port);
