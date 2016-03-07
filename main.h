@@ -13,4 +13,5 @@
 #include <poll.h>
 
 #include "queue.h"
+#include "logging.h"
 

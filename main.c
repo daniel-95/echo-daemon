@@ -1,48 +1,6 @@
 #include "main.h"
 #define BUFSIZE 32
 
-void write_log(char * info)
-{
-    time_t raw_time;
-    struct tm *cur_time;
-    char *printable_time;
-
-    time(&raw_time);
-    cur_time = localtime(&raw_time);
-
-    printable_time = (char *)asctime(cur_time);
-    printable_time[strlen(printable_time) - 1] = '\0';
-
-    FILE *fp;
-    fp = fopen("./echo-daemon.log", "a");
-    fprintf(fp, "[%s]: %s\n", printable_time, info);
-    fclose(fp);
-}
-
-void *logging_thread(void *log_queue)
-{
-    struct node *n;
-    struct queue *q = (struct queue*)log_queue;
-
-    for(;;)
-    {
-        lock_queue(q);
-        n = pop(q);
-
-        if(n != NULL)
-        {
-            write_log(n->data);
-            free(n->data);
-            free(n);
-        }
-
-        unlock_queue(q);
-    }
-
-    return (void*)0;
-}
-
-
 int main(int argc, char *argv[])
 {
     int status, cur_size;
@@ -69,18 +27,12 @@ int main(int argc, char *argv[])
     hints.ai_flags = AI_PASSIVE;
 
     if((status = getaddrinfo(NULL, port, &hints, &servinfo)) != 0)
-    {
-        printf("getaddrinfo() error");
         exit(1);
-    }
 
     for(p = servinfo; p->ai_next != NULL; p = p->ai_next)
     {
         if((sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0)
-        {
-            perror("socket");
             continue;
-        }
 
         int yes = 1;
 
@@ -90,29 +42,19 @@ int main(int argc, char *argv[])
         }
 
         if(bind(sock, p->ai_addr, p->ai_addrlen) < 0)
-        {
-        //    close(sock);
-            perror("bind");
             continue;
-        }
 
         flags = fcntl(sock, F_GETFL, 0);
         fcntl(sock, F_SETFL, flags | O_NONBLOCK);
     }
 
     if(p == NULL)
-    {
-        printf("Failed to bind");
         return -1;
-    }
 
     freeaddrinfo(servinfo);
 
     if(listen(sock, SOMAXCONN) < 0)
-    {
-        perror("listen");
         return -1;
-    }
 
     memset(fds, 0, sizeof(fds));
 
@@ -130,15 +72,11 @@ int main(int argc, char *argv[])
     {
         status = poll(fds, nfds, -1);
         if(status < 0)
-        {
-            perror("poll error\n");
             break;
-        }
 
         cur_size = nfds;
         for(i = 0; i < cur_size; i++)
         {
-
             if(fds[i].revents == 0)
                 continue;
 
@@ -150,17 +88,12 @@ int main(int argc, char *argv[])
 
                     if(client != -1)
                     {
-                        printf("new connection\n");
-
                         fds[nfds].fd = client;
                         fds[nfds].events = POLLIN | POLLOUT;
                         nfds++;
                     }
                     else if(errno != EAGAIN)
-                    {
-                        printf("Accepting error: %d\n", errno);
                         break;
-                    }
                 }
                 while(client != -1);
             }
@@ -191,8 +124,6 @@ int main(int argc, char *argv[])
                                 push(q, n);
                                 unlock_queue(q);
 
-                                printf("Sending back...\n");
-
                                 send(fds[i].fd, buf, strlen(buf), MSG_DONTWAIT);
 
                                 close(fds[i].fd);
@@ -200,8 +131,6 @@ int main(int argc, char *argv[])
                                 break;
                             }
                         }
-                        else if(errno == EWOULDBLOCK)
-                            printf("EWOULDBLOCK");
                         else
                             break;
                     }
