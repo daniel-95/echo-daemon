@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     }
 
     char *buf = NULL;
-    int N = 256;
+    int N = 32;
     struct sockaddr_storage client_addr;
     socklen_t addr_size = 0;
     int client;
@@ -83,20 +83,21 @@ int main(int argc, char *argv[])
         buf = malloc(N*sizeof(char));
         strcpy(buf, (char*)"");
 
-        char chunk[256];
+        char chunk[32];
         flags = fcntl(client, F_GETFL, 0);
         fcntl(client, F_SETFL, flags | O_NONBLOCK);
 
         while(1)
         {
-            read_bytes = recv(client, chunk, 256, 0);
+            read_bytes = recv(client, chunk, 32, 0);
             if(read_bytes == -1)
             {
                 if(errno == EAGAIN)
                 {
                     if(strlen(buf) > 0)
                     {
-                        printf("%s\n", buf);
+                        printf("Sending back...\n");
+                        close(client); //shutdown?
                         break;
                     }
                 }
@@ -114,7 +115,7 @@ int main(int argc, char *argv[])
                 strcat(buf, chunk);
             }
 
-            memset(chunk, 0, 256);
+            memset(chunk, 0, 32);
         }
     }
 
