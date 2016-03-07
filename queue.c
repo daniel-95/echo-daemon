@@ -1,16 +1,4 @@
-struct node
-{
-    char *data;
-    struct node *next;
-    struct node *prev;
-};
-
-struct queue
-{
-    struct node *head;
-    struct node *tail;
-    pthread_mutex_t *mutex;
-};
+#include "main.h"
 
 struct queue * new_queue()
 {
@@ -18,7 +6,7 @@ struct queue * new_queue()
     q->head = NULL;
     q->tail = NULL;
 
-    pthread_mutex_init(q->mutex, NULL);
+    pthread_mutex_init(&q->mutex, NULL);
 
     return q;
 }
@@ -68,10 +56,10 @@ struct node * pop(struct queue *q)
 
 int lock_queue(struct queue *q)
 {
-    return pthread_mutex_lock(q->mutex);
+    return pthread_mutex_lock(&q->mutex);
 }
 
 int unlock_queue(struct queue *q)
 {
-    return pthread_mutex_unlock(q->mutex);
+    return pthread_mutex_unlock(&q->mutex);
 }
