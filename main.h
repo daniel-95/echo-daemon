@@ -11,7 +11,10 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <poll.h>
+#include <sys/resource.h>
+#include <signal.h>
 
 #include "queue.h"
 #include "logging.h"
+#include "daemonize.h"
 

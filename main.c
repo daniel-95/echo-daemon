@@ -3,6 +3,8 @@
 
 int main(int argc, char *argv[])
 {
+    daemonize();
+
     int status, cur_size;
     int i, j;
     int flags;
