@@ -1,8 +1,17 @@
 #include "main.h"
 #define BUFSIZE 32
 
-int main()
+int main(int argc, char *argv[])
 {
+    char port[6];
+    int res = 0;
+
+    res = getopt(argc, argv, "p:");
+    if(res == 'p')
+        strcpy(port, optarg);
+    else
+        sprintf(port, "%d", 1234);
+
     daemonize();
 
     int status, cur_size;
@@ -11,15 +20,11 @@ int main()
     int sock;
     pthread_t log_thread;
     struct queue *q;
-    int int_port = 1234;
     struct addrinfo hints;
     struct addrinfo *servinfo, *p;
-    char port[6];
 
     struct pollfd fds[256];
     int nfds = 1;
-
-    sprintf(port, "%d", int_port);
 
     q = new_queue();
     pthread_create(&log_thread, NULL, logging_thread, (void*)q);
