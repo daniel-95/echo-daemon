@@ -1,7 +1,7 @@
 #include "main.h"
 #define BUFSIZE 32
 
-int main(int argc, char *argv[])
+int main()
 {
     daemonize();
 
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     fds[0].events = POLLIN;
 
     char *buf = NULL;
-    int N = BUFSIZE;
+    unsigned int N = BUFSIZE;
     struct sockaddr_storage client_addr;
     socklen_t addr_size = 0;
     int client;

@@ -2,7 +2,7 @@
 
 void daemonize()
 {
-    int i, fd0, fd1, fd2;
+    unsigned int i;
     pid_t pid;
     struct rlimit rl;
     struct sigaction sa;
@@ -41,7 +41,7 @@ void daemonize()
     for (i = 0; i < rl.rlim_max; i++)
         close(i);
 
-    fd0 = open("/dev/null", O_RDWR);
-    fd1 = dup(0);
-    fd2 = dup(0);
+    open("/dev/null", O_RDWR);
+    dup(0);
+    dup(0);
 }
