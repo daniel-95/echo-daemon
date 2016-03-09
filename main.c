@@ -164,6 +164,8 @@ int main(int argc, char *argv[])
             {
                 for(j = i; j < nfds-1; j++)
                     fds[i].fd = fds[i+1].fd;
+                    
+                nfds--;
             }
         }
     }
